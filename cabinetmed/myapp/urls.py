@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import MedecinViewSet, PatientViewSet, ConsultationViewSet, DossierMedicalViewSet, RendezVousViewSet
+from .views import MedecinViewSet, PatientViewSet, ConsultationViewSet, DossierMedicalViewSet, RendezVousViewSet, \
+    SignupView, SigninView
 
 router = DefaultRouter()
 router.register(r'medecins', MedecinViewSet)
@@ -11,4 +12,6 @@ router.register(r'rendezvous', RendezVousViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
+    path('signup/', SignupView.as_view()),
+    path('signin/', SigninView.as_view()),
 ]
