@@ -88,6 +88,7 @@ DATABASES = {
         'ENGINE': 'djongo',
         'HOST': 'localhost',
         'PORT': 27017,
+
     }
 }
 
@@ -110,6 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = 'myapp.Utilisateur'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

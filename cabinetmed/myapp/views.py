@@ -1,5 +1,4 @@
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import MedecinSerializer, PatientSerializer, ConsultationSerializer, DossierMedicalSerializer, \
     RendezVousSerializer
-from .models import Medecin, Consultation, DossierMedical, RendezVous
+from .models import Medecin, Consultation, DossierMedical, RendezVous, Utilisateur
 from .models import Patient
 
 class MedecinViewSet(viewsets.ModelViewSet):
@@ -33,26 +32,55 @@ class RendezVousViewSet(viewsets.ModelViewSet):
 
 class SignupView(APIView):
     def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
+        data = request.data
+        email = data.get('email')
+        password = data.get('password')
+        nom = data.get('nom')
+        prenom = data.get('prenom')
+        cin = data.get('cin')
+        accountType = data.get('accountType')
+        telephone = data.get('telephone')
 
-        if User.objects.filter(username=username).exists():
-            return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        if Utilisateur.objects.filter(email=email).exists():
+            return Response({"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.create_user(username=username, password=password)
-        return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
+        user = Utilisateur.objects.create_user(
+            cin=cin,
+            email=email,
+            password=password,
+            nom=nom,
+            prenom=prenom,
+            telephone=telephone,
+            accountType=accountType,
+        )
 
-# Sign In
+        # Synchronisation Neo4j automatique
+        from services.neo4jsvc import upsert_patient, upsert_medecin
+        if accountType == "Patient":
+            upsert_patient(user)
+        elif accountType == "Medecin":
+            upsert_medecin(user)
+
+        return Response({"message": "Compte créé"}, status=status.HTTP_201_CREATED)
+
+
 class SigninView(APIView):
     def post(self, request):
-        username = request.data.get("username")
+        email = request.data.get("email")
         password = request.data.get("password")
-        user = authenticate(username=username, password=password)
+
+        user = authenticate(email=email, password=password)
 
         if user:
             refresh = RefreshToken.for_user(user)
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
+                'user': {
+                    'nom': user.nom,
+                    'prenom': user.prenom,
+                    'email': user.email,
+                    'type': user.accountType
+                }
             })
-        return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"error": "Identifiants invalides"}, status=status.HTTP_401_UNAUTHORIZED)
